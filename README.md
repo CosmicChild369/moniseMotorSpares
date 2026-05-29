@@ -18,10 +18,45 @@ Full-stack e-commerce website for **Monise Motor Spares**, an automotive spares 
 - Email: Nodemailer
 - PDF: PDFKit
 
-## Quick Start
+## Run entirely on GitHub (recommended if you only use GitHub)
+
+GitHub **cannot** run Node.js + SQLite on Pages alone. This repo is set up to use **GitHub only** via:
+
+| What | Where |
+|------|--------|
+| Code | This repository |
+| Landing page | **GitHub Pages** (auto-deploys from `docs/`) |
+| Full store + admin | **GitHub Codespaces** (Node app in the cloud) |
+
+### 1. Turn on GitHub Pages (one time)
+
+1. Repo → **Settings** → **Pages**
+2. **Build and deployment** → Source: **GitHub Actions**
+3. Push to `main` — workflow `.github/workflows/github-pages.yml` publishes `docs/`
+4. Your landing page: `https://cosmicchild369.github.io/moniseMotorSpares/`
+
+### 2. Open the live store (Codespaces)
+
+1. Repo → green **Code** → **Codespaces** → **Create codespace on main**
+2. Wait ~2 min (install + seed runs automatically)
+3. Browser opens **port 3000** — that is your store
+4. **Ports** tab → set port `3000` to **Public** → copy URL to share
+
+- **Store:** `/` on that URL  
+- **Admin:** `/admin/`  
+- Default logins below (change after first login)
+
+Codespaces pauses when idle; open the codespace again from GitHub to wake it.
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=CosmicChild369/moniseMotorSpares)
+
+---
+
+## Quick Start (local)
 
 ```bash
-cd monise-spares
+git clone https://github.com/CosmicChild369/moniseMotorSpares.git
+cd moniseMotorSpares
 cp .env.example .env
 npm install
 npm run seed

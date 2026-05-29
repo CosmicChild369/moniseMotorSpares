@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monise Motor Spares | GitHub</title>
+  <style>
+    :root { --primary: #1A2A6C; --accent: #F5A623; --bg: #F5F5F5; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: #333;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 32px;
+      max-width: 520px;
+      width: 100%;
+    }
+    h1 { color: var(--primary); font-size: 1.5rem; margin-bottom: 8px; }
+    h1 span { color: var(--accent); }
+    p { margin: 12px 0; font-size: 15px; color: #555; }
+    .btns { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+    a.btn {
+      display: block;
+      padding: 14px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 15px;
+    }
+    .primary { background: var(--primary); color: #fff; }
+    .accent { background: var(--accent); color: var(--primary); }
+    .outline { border: 2px solid var(--primary); color: var(--primary); }
+    .note {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #666;
+      text-align: left;
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Monise <span>Motor Spares</span></h1>
+    <p>Katlehong automotive spares — full store &amp; admin dashboard</p>
+    <p><strong>This repo runs entirely on GitHub</strong> using Codespaces (cloud dev environment).</p>
+    <div class="btns">
+      <a class="btn accent" href="https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=CosmicChild369/moniseMotorSpares">
+        Open store in GitHub Codespaces
+      </a>
+      <a class="btn primary" href="https://github.com/CosmicChild369/moniseMotorSpares">
+        View repository
+      </a>
+      <a class="btn outline" href="https://github.com/CosmicChild369/moniseMotorSpares/blob/main/README.md">
+        Setup instructions
+      </a>
+    </div>
+    <div class="note">
+      <strong>How it works:</strong> Click Codespaces → wait for setup → browser opens port <code>3000</code>.
+      Store at <code>/</code>, admin at <code>/admin/</code>.
+      Share the forwarded port URL for demos. Codespaces sleeps when idle; wake it from GitHub.
+    </div>
+  </div>
+</body>
+</html>
