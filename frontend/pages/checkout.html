@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout | Monise Motor Spares</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="site-header"></div>
+  <main class="container section">
+    <h1 class="section-title">Checkout</h1>
+    <div class="checkout-steps">
+      <div class="step-indicator active" data-step="1">1. Contact</div>
+      <div class="step-indicator" data-step="2">2. Delivery</div>
+      <div class="step-indicator" data-step="3">3. Payment</div>
+      <div class="step-indicator" data-step="4">4. Review</div>
+    </div>
+    <div id="alert-box"></div>
+
+    <!-- Step 1 -->
+    <div class="checkout-panel active card" style="padding:20px" id="step-1">
+      <h3>Contact Details</h3>
+      <div class="form-row form-row-2">
+        <div class="form-group"><label>Full Name *</label><input type="text" id="name" required></div>
+        <div class="form-group"><label>Phone *</label><input type="tel" id="phone" required placeholder="0711234567"></div>
+      </div>
+      <div class="form-group"><label>Email *</label><input type="email" id="email" required></div>
+      <button class="btn btn-primary" onclick="goStep(2)">Continue to Delivery</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="checkout-panel card" style="padding:20px" id="step-2">
+      <h3>Delivery</h3>
+      <div class="form-group">
+        <label><input type="radio" name="delivery" value="standard" checked> Standard (3-5 days) - R89</label><br>
+        <label><input type="radio" name="delivery" value="express"> Express (next day) - R149</label><br>
+        <label><input type="radio" name="delivery" value="collection"> Collect in store (Katlehong) - FREE</label>
+      </div>
+      <div id="address-fields">
+        <div class="form-group"><label>Street Address</label><input type="text" id="address"></div>
+        <div class="form-row form-row-2">
+          <div class="form-group"><label>Suburb</label><input type="text" id="suburb"></div>
+          <div class="form-group"><label>City</label><input type="text" id="city" value="Katlehong"></div>
+        </div>
+        <div class="form-group"><label>Postal Code</label><input type="text" id="postal"></div>
+      </div>
+      <button class="btn btn-outline" onclick="goStep(1)">Back</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Continue to Payment</button>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="checkout-panel card" style="padding:20px" id="step-3">
+      <h3>Payment Method</h3>
+      <div class="form-group">
+        <label><input type="radio" name="payment" value="payfast" checked> PayFast (Card, EFT, SnapScan, Mobicred)</label><br>
+        <label><input type="radio" name="payment" value="pay_in_store"> Pay in store on collection</label>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted)">PayFast supports Visa, Mastercard, Instant EFT, SnapScan and Mobicred.</p>
+      <button class="btn btn-outline" onclick="goStep(2)">Back</button>
+      <button class="btn btn-primary" onclick="goStep(4)">Review Order</button>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="checkout-panel card" style="padding:20px" id="step-4">
+      <h3>Order Review</h3>
+      <div id="review-summary"></div>
+      <button class="btn btn-outline" onclick="goStep(3)">Back</button>
+      <button class="btn btn-accent btn-block" id="place-order" style="margin-top:16px">Confirm & Place Order</button>
+    </div>
+  </main>
+  <div id="site-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/components.js"></script>
+  <script src="/js/vehicle-selector.js"></script>
+  <script>
+    let step = 1;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initLayout();
+      if (!getCart().length) {
+        window.location.href = '/pages/cart.html';
+        return;
+      }
+      try {
+        const { user } = await AuthAPI.me();
+        if (user) {
+          document.getElementById('name').value = user.name || '';
+          document.getElementById('email').value = user.email || '';
+          document.getElementById('phone').value = user.phone || '';
+          document.getElementById('address').value = user.address || '';
+        }
+      } catch {}
+      document.querySelectorAll('input[name="delivery"]').forEach((r) => {
+        r.addEventListener('change', toggleAddress);
+      });
+      toggleAddress();
+      document.getElementById('place-order').addEventListener('click', placeOrder);
+    });
+
+    function toggleAddress() {
+      const collection = document.querySelector('input[name="delivery"]:checked')?.value === 'collection';
+      document.getElementById('address-fields').classList.toggle('hidden', collection);
+    }
+
+    function goStep(n) {
+      if (n === 2 && (!document.getElementById('name').value || !document.getElementById('email').value)) {
+        showAlert(document.getElementById('alert-box'), 'Please fill in contact details');
+        return;
+      }
+      step = n;
+      document.querySelectorAll('.checkout-panel').forEach((p) => p.classList.remove('active'));
+      document.getElementById(`step-${n}`).classList.add('active');
+      document.querySelectorAll('.step-indicator').forEach((s) => {
+        const sn = Number(s.dataset.step);
+        s.classList.toggle('active', sn === n);
+        s.classList.toggle('done', sn < n);
+      });
+      if (n === 4) renderReview();
+    }
+
+    function renderReview() {
+      const delivery = document.querySelector('input[name="delivery"]:checked').value;
+      const payment = document.querySelector('input[name="payment"]:checked').value;
+      const discount = Number(localStorage.getItem('mms_discount') || 0);
+      const t = calcTotals(delivery, discount);
+      const cart = getCart();
+      document.getElementById('review-summary').innerHTML = `
+        <p><strong>${document.getElementById('name').value}</strong><br>
+        ${document.getElementById('email').value} | ${document.getElementById('phone').value}</p>
+        <p>Delivery: ${delivery} | Payment: ${payment}</p>
+        <ul>${cart.map((i) => `<li>${i.name} x${i.quantity} - ${formatZAR(i.price * i.quantity)}</li>`).join('')}</ul>
+        <p><strong>Total: ${formatZAR(t.total)}</strong> (incl. VAT)</p>`;
+    }
+
+    async function placeOrder() {
+      const btn = document.getElementById('place-order');
+      btn.disabled = true;
+      const delivery = document.querySelector('input[name="delivery"]:checked').value;
+      const payment = document.querySelector('input[name="payment"]:checked').value;
+      const collection = delivery === 'collection';
+      const address = collection ? 'Collect at 604 Monise Section, Katlehong' :
+        [document.getElementById('address').value, document.getElementById('suburb').value,
+         document.getElementById('city').value, document.getElementById('postal').value].filter(Boolean).join(', ');
+
+      try {
+        const { order } = await OrdersAPI.create({
+          items: getCart().map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+          guest_name: document.getElementById('name').value,
+          guest_email: document.getElementById('email').value,
+          guest_phone: document.getElementById('phone').value,
+          delivery_type: delivery,
+          delivery_address: address,
+          payment_method: payment,
+          promo_code: localStorage.getItem('mms_promo') || ''
+        });
+        clearCart();
+        localStorage.removeItem('mms_promo');
+
+        if (payment === 'payfast') {
+          const { payment: pf } = await PaymentsAPI.payfast(order.order_number);
+          submitPayfastForm(pf);
+        } else {
+          window.location.href = `/pages/order-success.html?order=${order.order_number}`;
+        }
+      } catch (e) {
+        showAlert(document.getElementById('alert-box'), e.message);
+        btn.disabled = false;
+      }
+    }
+
+    function submitPayfastForm(data) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = data.action;
+      Object.entries(data).forEach(([k, v]) => {
+        if (k !== 'action') {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = k;
+          input.value = v;
+          form.appendChild(input);
+        }
+      });
+      document.body.appendChild(form);
+      form.submit();
+    }
+  </script>
+</body>
+</html>

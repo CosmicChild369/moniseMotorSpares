@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product | Monise Motor Spares</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="site-header"></div>
+  <main class="container section" id="product-main">
+    <div class="loading">Loading product...</div>
+  </main>
+  <div id="site-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/components.js"></script>
+  <script src="/js/vehicle-selector.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      initLayout();
+      const id = getParam('id');
+      if (!id) { document.getElementById('product-main').innerHTML = '<p>Product not found</p>'; return; }
+      try {
+        const { product, reviews, related } = await ProductsAPI.get(id);
+        renderProduct(product, reviews, related);
+      } catch (e) {
+        document.getElementById('product-main').innerHTML = `<p class="alert alert-error">${e.message}</p>`;
+      }
+    });
+
+    function renderProduct(p, reviews, related) {
+      const vehicle = getSelectedVehicle();
+      const fits = vehicle && p.vehicles?.some((v) => v.id === vehicle.id);
+      const price = p.sale_price || p.price;
+      const onSale = p.sale_price && p.sale_price < p.price;
+      const stock = stockStatus(p.stock_qty, p.low_stock_threshold);
+      const imgs = p.images?.length ? p.images : [{ image_url: '/uploads/placeholder-product.svg' }];
+      const specs = typeof p.specifications === 'string' ? JSON.parse(p.specifications || '{}') : p.specifications || {};
+      const waMsg = `Hi, I'd like to order:\n${p.name}\nPart No: ${p.sku}\nPrice: ${formatZAR(price)}`;
+
+      document.title = `${p.name} | Monise Motor Spares`;
+      document.getElementById('product-main').innerHTML = `
+        <div class="product-detail">
+          <div>
+            <div class="gallery-main"><img id="main-img" src="${imgs[0].image_url}" alt="${p.name}"></div>
+            <div class="gallery-thumbs">${imgs.map((img, i) => `<img src="${img.image_url}" data-src="${img.image_url}" class="${i === 0 ? 'active' : ''}">`).join('')}</div>
+          </div>
+          <div>
+            <span class="brand">${p.brand}</span>
+            <h1 style="font-size:1.5rem;margin:8px 0">${p.name}</h1>
+            <p style="color:var(--text-muted)">SKU: ${p.sku}</p>
+            ${fits ? `<p class="badge badge-fit">✓ Fits your ${vehicle.label}</p>` : ''}
+            ${p.old_battery_required ? '<p class="badge badge-sale">⚠ Old battery required on purchase</p>' : ''}
+            ${p.quantum_part ? '<p class="badge badge-fit">Toyota Quantum Part</p>' : ''}
+            <div class="price" style="font-size:1.75rem;font-weight:700;margin:16px 0;color:var(--primary)">
+              ${onSale ? `<span class="was" style="font-size:1rem">${formatZAR(p.price)}</span>` : ''}
+              ${formatZAR(price)}
+            </div>
+            <span class="badge ${stock.class}">${stock.label}</span>
+            <div class="rating" style="margin:12px 0">${stars(p.rating_avg)} (${p.rating_count} reviews)</div>
+            <div style="display:flex;gap:12px;align-items:center;margin:20px 0">
+              <label>Qty:</label>
+              <input type="number" id="qty" value="1" min="1" max="${p.stock_qty}" style="width:70px;padding:8px">
+              <button class="btn btn-primary" id="add-cart" ${p.stock_qty <= 0 ? 'disabled' : ''}>Add to Cart</button>
+            </div>
+            <a href="${whatsappUrl(waMsg)}" class="btn btn-whatsapp btn-block" target="_blank" rel="noopener">Order via WhatsApp</a>
+          </div>
+        </div>
+        <div class="tabs">
+          <button class="active" data-tab="desc">Description</button>
+          <button data-tab="specs">Specifications</button>
+          <button data-tab="compat">Compatibility</button>
+          <button data-tab="reviews">Reviews</button>
+        </div>
+        <div class="tab-panel active" id="tab-desc"><p>${p.description || ''}</p></div>
+        <div class="tab-panel" id="tab-specs"><ul>${Object.entries(specs).map(([k,v]) => `<li><strong>${k}:</strong> ${v}</li>`).join('')}</ul></div>
+        <div class="tab-panel" id="tab-compat">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <tr style="background:var(--primary);color:#fff"><th>Year</th><th>Make</th><th>Model</th><th>Engine</th></tr>
+            ${(p.vehicles || []).map((v) => `<tr><td style="padding:8px;border:1px solid var(--border)">${v.year}</td><td style="padding:8px;border:1px solid var(--border)">${v.make}</td><td style="padding:8px;border:1px solid var(--border)">${v.model}</td><td style="padding:8px;border:1px solid var(--border)">${v.engine}</td></tr>`).join('') || '<tr><td colspan="4">Universal fitment — contact us to confirm</td></tr>'}
+          </table>
+        </div>
+        <div class="tab-panel" id="tab-reviews">
+          ${reviews.map((r) => `<div class="card" style="padding:12px;margin-bottom:8px"><strong>${r.author_name}</strong> ${stars(r.rating)}<p>${r.comment || ''}</p></div>`).join('') || '<p>No reviews yet.</p>'}
+        </div>
+        <section class="section">
+          <h2 class="section-title">Related Products</h2>
+          <div class="grid-4">${related.map((r) => productCardHTML(r)).join('')}</div>
+        </section>`;
+
+      document.querySelectorAll('.gallery-thumbs img').forEach((img) => {
+        img.addEventListener('click', () => {
+          document.getElementById('main-img').src = img.dataset.src;
+        });
+      });
+      document.querySelectorAll('.tabs button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        });
+      });
+      document.getElementById('add-cart').addEventListener('click', () => {
+        const qty = Number(document.getElementById('qty').value) || 1;
+        addToCart({ ...p, primary_image: imgs[0].image_url }, qty);
+        alert('Added to cart!');
+      });
+      bindAddToCart(document.querySelector('.grid-4'), related);
+    }
+  </script>
+</body>
+</html>

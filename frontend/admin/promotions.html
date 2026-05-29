@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promotions | Monise Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout" id="layout"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/admin/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!await requireAdmin()) return;
+      document.getElementById('layout').innerHTML = `
+        ${renderAdminNav('promotions')}
+        <main class="admin-main">
+          <h1>Promotions & Banners</h1>
+          <h3 style="margin:20px 0">Promo Codes</h3>
+          <form id="add-promo" class="card" style="padding:16px;margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <input name="code" placeholder="CODE" required>
+            <select name="type"><option value="percentage">%</option><option value="fixed">Fixed R</option></select>
+            <input name="value" type="number" placeholder="Value" required>
+            <button class="btn btn-primary">Add</button>
+          </form>
+          <div id="promos"></div>
+          <h3 style="margin:20px 0">Homepage Banners</h3>
+          <form id="add-banner" class="card" style="padding:16px;margin-bottom:16px">
+            <input name="image_url" placeholder="Image URL" style="width:100%;margin-bottom:8px" value="/uploads/banner-1.svg">
+            <input name="link" placeholder="Link URL" style="width:100%;margin-bottom:8px">
+            <input name="title" placeholder="Title" style="width:100%;margin-bottom:8px">
+            <button class="btn btn-primary">Add Banner</button>
+          </form>
+          <div id="banners"></div>
+        </main>`;
+      initAdminLogout();
+      load();
+      document.getElementById('add-promo').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        await AdminAPI.post('/promos', Object.fromEntries(fd));
+        e.target.reset(); load();
+      };
+      document.getElementById('add-banner').onsubmit = async (e) => {
+        e.preventDefault();
+        await AdminAPI.post('/banners', Object.fromEntries(new FormData(e.target)));
+        e.target.reset(); load();
+      };
+    });
+    async function load() {
+      const [promos, banners] = await Promise.all([
+        AdminAPI.get('/promos'),
+        AdminAPI.get('/banners')
+      ]);
+      document.getElementById('promos').innerHTML = `
+        <table class="data-table"><tr><th>Code</th><th>Type</th><th>Value</th><th>Used</th></tr>
+        ${promos.promos.map((p) => `<tr><td>${p.code}</td><td>${p.type}</td><td>${p.value}</td><td>${p.used_count}/${p.usage_limit || '∞'}</td></tr>`).join('')}
+        </table>`;
+      document.getElementById('banners').innerHTML = `
+        <table class="data-table"><tr><th>Image</th><th>Title</th><th>Link</th></tr>
+        ${banners.banners.map((b) => `<tr><td>${b.image_url}</td><td>${b.title}</td><td>${b.link}</td></tr>`).join('')}
+        </table>`;
+    }
+  </script>
+</body>
+</html>

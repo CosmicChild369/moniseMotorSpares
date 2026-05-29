@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings | Monise Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout" id="layout"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/admin/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await requireAdmin();
+      if (!user) return;
+      document.getElementById('layout').innerHTML = `
+        ${renderAdminNav('settings')}
+        <main class="admin-main">
+          <h1>Settings</h1>
+          <form id="settings-form" class="card" style="padding:24px;max-width:600px"></form>
+        </main>`;
+      initAdminLogout();
+      const { settings } = await AdminAPI.get('/settings');
+      const fields = [
+        ['business_name', 'Business Name'],
+        ['business_address', 'Address'],
+        ['business_phone', 'Phone'],
+        ['business_phone2', 'Phone 2'],
+        ['whatsapp_number', 'WhatsApp Number'],
+        ['vat_number', 'VAT Number'],
+        ['delivery_standard_fee', 'Standard Delivery Fee (R)'],
+        ['delivery_express_fee', 'Express Delivery Fee (R)'],
+        ['payfast_merchant_id', 'PayFast Merchant ID'],
+        ['payfast_merchant_key', 'PayFast Merchant Key'],
+        ['payfast_passphrase', 'PayFast Passphrase'],
+        ['payfast_sandbox', 'PayFast Sandbox (true/false)'],
+        ['invoice_footer', 'Invoice Footer Text']
+      ];
+      document.getElementById('settings-form').innerHTML = fields.map(([k, label]) => `
+        <div class="form-group"><label>${label}</label>
+        <input name="${k}" value="${settings[k] || ''}" ${user.role !== 'super_admin' ? 'disabled' : ''}></div>`).join('') +
+        (user.role === 'super_admin' ? '<button type="submit" class="btn btn-primary">Save Settings</button>' : '<p>Super admin required to edit settings</p>');
+      if (user.role === 'super_admin') {
+        document.getElementById('settings-form').onsubmit = async (e) => {
+          e.preventDefault();
+          const body = Object.fromEntries(new FormData(e.target));
+          await AdminAPI.put('/settings', body);
+          alert('Settings saved');
+        };
+      }
+    });
+  </script>
+</body>
+</html>

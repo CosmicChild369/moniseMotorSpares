@@ -1,0 +1,9 @@
+node_modules/
+data/
+.env
+uploads/products/*
+uploads/invoices/*
+uploads/temp/*
+!uploads/*.svg
+!uploads/*.png
+!uploads/categories/

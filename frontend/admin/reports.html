@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports | Monise Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout" id="layout"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/admin/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!await requireAdmin()) return;
+      document.getElementById('layout').innerHTML = `
+        ${renderAdminNav('reports')}
+        <main class="admin-main">
+          <h1>Reports</h1>
+          <div class="card" style="padding:20px;margin-bottom:20px">
+            <h3>Top Selling Products</h3>
+            <div id="top-products"></div>
+          </div>
+          <div class="card" style="padding:20px">
+            <h3>Revenue by Category</h3>
+            <div id="by-category"></div>
+          </div>
+        </main>`;
+      initAdminLogout();
+      const [top, cat] = await Promise.all([
+        AdminAPI.get('/reports/top-products'),
+        AdminAPI.get('/reports/by-category')
+      ]);
+      document.getElementById('top-products').innerHTML = `
+        <table class="data-table"><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr>
+        ${top.top.map((p) => `<tr><td>${p.product_name}</td><td>${p.qty}</td><td>${formatZAR(p.revenue)}</td></tr>`).join('')}
+        </table>`;
+      document.getElementById('by-category').innerHTML = `
+        <table class="data-table"><tr><th>Category</th><th>Revenue</th></tr>
+        ${cat.data.map((c) => `<tr><td>${c.name}</td><td>${formatZAR(c.revenue)}</td></tr>`).join('')}
+        </table>`;
+    });
+  </script>
+</body>
+</html>

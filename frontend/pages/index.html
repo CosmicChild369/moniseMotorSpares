@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monise Motor Spares | Katlehong Automotive Parts</title>
+  <meta name="description" content="Quality automotive spares in Katlehong. Castrol, Shell, Willard batteries, Toyota Quantum parts.">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <main class="container section">
+    <!-- Hero banners -->
+    <div class="hero-slider" id="hero-slider">
+      <div class="loading">Loading specials...</div>
+    </div>
+
+    <!-- Toyota Quantum section -->
+    <div class="quantum-banner">
+      <div class="quantum-img">
+        <img src="/uploads/categories/toyota-quantum.png" alt="Toyota Quantum">
+      </div>
+      <div class="quantum-text">
+        <strong>Toyota Quantum Parts</strong>
+        <span>Popular in Katlehong — clutch kits, brakes, alternators &amp; more.</span>
+      </div>
+      <a href="/pages/products.html?category=toyota-quantum">Shop Quantum Parts →</a>
+    </div>
+
+    <!-- Today's Specials -->
+    <section class="section">
+      <h2 class="section-title">Today's Specials</h2>
+      <div class="countdown" id="countdown"></div>
+      <div class="grid-4" id="specials-grid"><div class="loading">Loading...</div></div>
+    </section>
+
+    <!-- Categories -->
+    <section class="section">
+      <h2 class="section-title">Shop by Category</h2>
+      <div class="cat-grid" id="categories-grid"></div>
+    </section>
+
+    <!-- Featured -->
+    <section class="section">
+      <h2 class="section-title">Featured Products</h2>
+      <div class="grid-4" id="featured-grid"><div class="loading">Loading...</div></div>
+    </section>
+
+    <!-- Brands -->
+    <section class="section">
+      <h2 class="section-title">Trusted Brands</h2>
+      <div class="brand-strip" id="brand-strip"></div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/category-images.js"></script>
+  <script src="/js/components.js"></script>
+  <script src="/js/vehicle-selector.js"></script>
+  <script>
+    let featuredProducts = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initLayout();
+      loadBanners();
+      loadCountdown();
+      loadSpecials();
+      loadCategories();
+      loadFeatured();
+      loadBrands();
+    });
+
+    function loadCountdown() {
+      const el = document.getElementById('countdown');
+      function tick() {
+        const c = getMidnightCountdown();
+        el.innerHTML = `
+          <div class="unit"><span>${c.hours}</span><small>Hrs</small></div>
+          <div class="unit"><span>${c.minutes}</span><small>Min</small></div>
+          <div class="unit"><span>${c.seconds}</span><small>Sec</small></div>`;
+      }
+      tick();
+      setInterval(tick, 1000);
+    }
+
+    async function loadBanners() {
+      const el = document.getElementById('hero-slider');
+      try {
+        const { banners } = await BannersAPI.list();
+        if (!banners.length) {
+          el.innerHTML = '<div class="hero-slide active"><img src="/uploads/banner-oils.png" alt="Monise Motor Spares"></div>';
+          return;
+        }
+        el.innerHTML = banners.map((b, i) => `
+          <a href="${b.link || '#'}" class="hero-slide ${i === 0 ? 'active' : ''}">
+            <img src="${b.image_url}" alt="${b.title || 'Sale'}">
+          </a>`).join('') +
+          `<div class="hero-dots">${banners.map((_, i) => `<span data-i="${i}" class="${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`;
+        let idx = 0;
+        const slides = el.querySelectorAll('.hero-slide');
+        const dots = el.querySelectorAll('.hero-dots span');
+        setInterval(() => {
+          slides[idx].classList.remove('active');
+          dots[idx]?.classList.remove('active');
+          idx = (idx + 1) % slides.length;
+          slides[idx].classList.add('active');
+          dots[idx]?.classList.add('active');
+        }, 5000);
+      } catch {
+        el.innerHTML = '<div class="hero-slide active"><img src="/uploads/banner-oils.png" alt="Welcome"></div>';
+      }
+    }
+
+    async function loadSpecials() {
+      const grid = document.getElementById('specials-grid');
+      try {
+        const { products } = await ProductsAPI.list({ dailySpecial: 'true', limit: 8 });
+        if (!products.length) {
+          const alt = await ProductsAPI.specials();
+          renderProducts(grid, alt.products);
+        } else renderProducts(grid, products);
+      } catch { grid.innerHTML = '<p>No specials today.</p>'; }
+    }
+
+    async function loadFeatured() {
+      const grid = document.getElementById('featured-grid');
+      try {
+        const { products } = await ProductsAPI.featured();
+        featuredProducts = products;
+        renderProducts(grid, products);
+      } catch { grid.innerHTML = '<p>Could not load products.</p>'; }
+    }
+
+    function renderProducts(grid, products) {
+      grid.innerHTML = products.map((p) => productCardHTML(p)).join('');
+      bindAddToCart(grid, products);
+    }
+
+    async function loadCategories() {
+      const grid = document.getElementById('categories-grid');
+      try {
+        const { categories } = await CategoriesAPI.list();
+        grid.innerHTML = categories.map((c) => renderCategoryCard(c)).join('');
+      } catch { grid.innerHTML = ''; }
+    }
+
+    function loadBrands() {
+      document.getElementById('brand-strip').innerHTML = BRANDS.map((b) => `<span>${b}</span>`).join('');
+    }
+  </script>
+</body>
+</html>

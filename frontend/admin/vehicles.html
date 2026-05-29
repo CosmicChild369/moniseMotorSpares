@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicles | Monise Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout" id="layout"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/admin/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!await requireAdmin()) return;
+      document.getElementById('layout').innerHTML = `
+        ${renderAdminNav('vehicles')}
+        <main class="admin-main">
+          <h1>Vehicle Fitment Database</h1>
+          <form id="add-veh" class="card" style="padding:16px;margin:16px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <input name="year" type="number" placeholder="Year" required>
+            <input name="make" placeholder="Make" required>
+            <input name="model" placeholder="Model" required>
+            <input name="engine" placeholder="Engine" required>
+            <button class="btn btn-primary" style="grid-column:1/-1">Add Vehicle</button>
+          </form>
+          <div id="list"></div>
+        </main>`;
+      initAdminLogout();
+      load();
+      document.getElementById('add-veh').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        await AdminAPI.post('/vehicles', Object.fromEntries(fd));
+        e.target.reset(); load();
+      };
+    });
+    async function load() {
+      const { vehicles } = await AdminAPI.get('/vehicles');
+      document.getElementById('list').innerHTML = `
+        <table class="data-table"><tr><th>Year</th><th>Make</th><th>Model</th><th>Engine</th><th></th></tr>
+        ${vehicles.map((v) => `<tr><td>${v.year}</td><td>${v.make}</td><td>${v.model}</td><td>${v.engine}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="del(${v.id})">Delete</button></td></tr>`).join('')}
+        </table>`;
+    }
+    async function del(id) { if (confirm('Delete?')) { await AdminAPI.delete(`/vehicles/${id}`); load(); } }
+  </script>
+</body>
+</html>

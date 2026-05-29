@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Order | Monise Motor Spares</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="site-header"></div>
+  <main class="container section tracker">
+    <h1 class="section-title">Track Your Order</h1>
+    <p style="text-align:center;margin-bottom:24px">No login required — enter your order number and phone.</p>
+    <form id="track-form" class="card" style="padding:20px;max-width:400px;margin:0 auto 24px">
+      <div class="form-group"><label>Order Number</label><input type="text" id="order-number" placeholder="MMS-20260529-1234" required></div>
+      <div class="form-group"><label>Phone Number</label><input type="tel" id="phone" placeholder="0711234567" required></div>
+      <button type="submit" class="btn btn-primary btn-block">Track Order</button>
+    </form>
+    <div id="track-result" class="hidden"></div>
+  </main>
+  <div id="site-footer"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/components.js"></script>
+  <script>
+    const STEPS = ['pending', 'confirmed', 'packed', 'dispatched', 'delivered'];
+    const LABELS = ['Order Placed', 'Confirmed', 'Packed', 'Dispatched', 'Delivered'];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initLayout();
+      document.getElementById('track-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const data = await OrdersAPI.track(
+            document.getElementById('order-number').value,
+            document.getElementById('phone').value
+          );
+          showResult(data);
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+
+    function showResult({ order, items, whatsapp_url }) {
+      const el = document.getElementById('track-result');
+      el.classList.remove('hidden');
+      const idx = STEPS.indexOf(order.status);
+      el.innerHTML = `
+        <div class="card" style="padding:24px">
+          <h2>Order ${order.order_number}</h2>
+          <p>Status: <span class="status-badge status-${order.status}">${order.status}</span></p>
+          ${order.estimated_delivery ? `<p>Estimated delivery: <strong>${order.estimated_delivery}</strong></p>` : ''}
+          <div class="progress-bar">
+            ${LABELS.map((label, i) => `
+              <div class="progress-step ${i <= idx ? 'done' : ''} ${i === idx ? 'active' : ''}">
+                <div class="dot">${i + 1}</div>
+                <span>${label}</span>
+              </div>`).join('')}
+          </div>
+          <h3 style="margin-top:24px">Items</h3>
+          <ul>${items.map((i) => `<li>${i.product_name} x${i.quantity}</li>`).join('')}</ul>
+          <p><strong>Total: ${formatZAR(order.total)}</strong></p>
+          <a href="${whatsapp_url}" class="btn btn-whatsapp btn-block" target="_blank">Query on WhatsApp</a>
+        </div>`;
+    }
+  </script>
+</body>
+</html>

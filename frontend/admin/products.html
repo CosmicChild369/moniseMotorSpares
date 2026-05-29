@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products | Monise Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout" id="layout"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/admin/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!await requireAdmin()) return;
+      document.getElementById('layout').innerHTML = `
+        ${renderAdminNav('products')}
+        <main class="admin-main">
+          <div class="admin-header">
+            <h1>Products</h1>
+            <button class="btn btn-accent" onclick="showAddForm()">+ Add Product</button>
+          </div>
+          <div class="card" style="padding:16px;margin-bottom:16px">
+            <input type="search" id="search" placeholder="Search..." style="width:100%;padding:10px">
+          </div>
+          <div id="products-table"></div>
+          <div id="product-form" class="hidden card" style="padding:20px;margin-top:20px"></div>
+        </main>`;
+      initAdminLogout();
+      loadProducts();
+      document.getElementById('search').addEventListener('input', debounce(loadProducts, 300));
+    });
+
+    async function loadProducts() {
+      const search = document.getElementById('search')?.value || '';
+      const { products } = await AdminAPI.get(`/products?search=${search}`);
+      document.getElementById('products-table').innerHTML = `
+        <table class="data-table">
+          <tr><th>SKU</th><th>Name</th><th>Brand</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
+          ${products.map((p) => `<tr>
+            <td>${p.sku}</td><td>${p.name}</td><td>${p.brand}</td>
+            <td>${formatZAR(p.sale_price || p.price)}</td><td>${p.stock_qty}</td><td>${p.status}</td>
+            <td><button class="btn btn-sm btn-outline" onclick="editProduct(${p.id})">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Delete</button></td>
+          </tr>`).join('')}
+        </table>`;
+    }
+
+    function showAddForm() {
+      const el = document.getElementById('product-form');
+      el.classList.remove('hidden');
+      el.innerHTML = `
+        <h3>Add Product</h3>
+        <form id="add-product-form" enctype="multipart/form-data">
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Name</label><input name="name" required></div>
+            <div class="form-group"><label>Brand</label><input name="brand" required></div>
+          </div>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>SKU</label><input name="sku" required></div>
+            <div class="form-group"><label>Category ID</label><input name="category_id" type="number" value="1"></div>
+          </div>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Price (R)</label><input name="price" type="number" step="0.01" required></div>
+            <div class="form-group"><label>Sale Price</label><input name="sale_price" type="number" step="0.01"></div>
+          </div>
+          <div class="form-group"><label>Stock Qty</label><input name="stock_qty" type="number" value="10"></div>
+          <div class="form-group"><label>Description</label><textarea name="description" rows="3"></textarea></div>
+          <div class="form-group"><label><input type="checkbox" name="old_battery_required"> Old battery required</label></div>
+          <div class="form-group"><label><input type="checkbox" name="quantum_part"> Toyota Quantum part</label></div>
+          <div class="form-group"><label>Images</label><input type="file" name="images" multiple accept="image/*"></div>
+          <button type="submit" class="btn btn-primary">Save Product</button>
+        </form>`;
+      document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        fd.append('old_battery_required', e.target.old_battery_required?.checked ? '1' : '0');
+        fd.append('quantum_part', e.target.quantum_part?.checked ? '1' : '0');
+        fd.append('status', 'active');
+        const res = await fetch('/api/admin/products', { method: 'POST', body: fd, credentials: 'include' });
+        if (res.ok) { loadProducts(); el.classList.add('hidden'); alert('Product added'); }
+        else alert((await res.json()).error);
+      });
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('Delete this product?')) return;
+      await AdminAPI.delete(`/products/${id}`);
+      loadProducts();
+    }
+
+    async function editProduct(id) {
+      const { product } = await AdminAPI.get(`/products/${id}`);
+      showAddForm();
+      const form = document.getElementById('add-product-form');
+      form.name.value = product.name;
+      form.brand.value = product.brand;
+      form.sku.value = product.sku;
+      form.category_id.value = product.category_id;
+      form.price.value = product.price;
+      form.sale_price.value = product.sale_price || '';
+      form.stock_qty.value = product.stock_qty;
+      form.description.value = product.description || '';
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        fd.append('old_battery_required', form.old_battery_required?.checked ? '1' : '0');
+        fd.append('quantum_part', form.quantum_part?.checked ? '1' : '0');
+        const res = await fetch(`/api/admin/products/${id}`, { method: 'PUT', body: fd, credentials: 'include' });
+        if (res.ok) { loadProducts(); alert('Updated'); }
+      };
+    }
+  </script>
+</body>
+</html>

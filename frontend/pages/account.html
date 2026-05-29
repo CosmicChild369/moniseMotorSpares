@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Account | Monise Motor Spares</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="site-header"></div>
+  <main class="container section">
+    <h1 class="section-title" id="welcome">My Account</h1>
+    <div class="account-layout">
+      <nav class="account-nav">
+        <a href="#" class="active" data-panel="orders">My Orders</a>
+        <a href="#" data-panel="vehicles">Saved Vehicles</a>
+        <a href="#" data-panel="wishlist">Wishlist</a>
+        <a href="#" data-panel="profile">Profile</a>
+        <a href="#" id="logout-btn">Logout</a>
+      </nav>
+      <div>
+        <div id="panel-orders" class="account-panel">
+          <div id="orders-list"><div class="loading">Loading...</div></div>
+        </div>
+        <div id="panel-vehicles" class="account-panel hidden">
+          <div id="vehicles-list"></div>
+          <p style="margin-top:16px;font-size:14px">Use the vehicle selector in the header to add vehicles, then save from product pages.</p>
+        </div>
+        <div id="panel-wishlist" class="account-panel hidden">
+          <div class="grid-3" id="wishlist-grid"></div>
+        </div>
+        <div id="panel-profile" class="account-panel hidden">
+          <form id="profile-form" class="card" style="padding:20px;max-width:500px">
+            <div class="form-group"><label>Name</label><input name="name" id="prof-name"></div>
+            <div class="form-group"><label>Email</label><input name="email" id="prof-email" disabled></div>
+            <div class="form-group"><label>Phone</label><input name="phone" id="prof-phone"></div>
+            <div class="form-group"><label>Address</label><textarea name="address" id="prof-address" rows="3"></textarea></div>
+            <button type="submit" class="btn btn-primary">Save Profile</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div id="site-footer"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/components.js"></script>
+  <script src="/js/vehicle-selector.js"></script>
+  <script>
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initLayout();
+      try {
+        const { user } = await AuthAPI.me();
+        currentUser = user;
+        document.getElementById('welcome').textContent = `Welcome, ${user.name}`;
+        document.getElementById('prof-name').value = user.name;
+        document.getElementById('prof-email').value = user.email;
+        document.getElementById('prof-phone').value = user.phone || '';
+        document.getElementById('prof-address').value = user.address || '';
+        loadOrders();
+        loadVehicles();
+        loadWishlist();
+      } catch {
+        window.location.href = '/pages/login.html';
+      }
+
+      document.querySelectorAll('.account-nav a[data-panel]').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.querySelectorAll('.account-nav a').forEach((x) => x.classList.remove('active'));
+          a.classList.add('active');
+          document.querySelectorAll('.account-panel').forEach((p) => p.classList.add('hidden'));
+          document.getElementById(`panel-${a.dataset.panel}`).classList.remove('hidden');
+        });
+      });
+      document.getElementById('logout-btn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await AuthAPI.logout();
+        window.location.href = '/';
+      });
+      document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await AuthAPI.updateProfile({
+          name: document.getElementById('prof-name').value,
+          phone: document.getElementById('prof-phone').value,
+          address: document.getElementById('prof-address').value
+        });
+        alert('Profile saved');
+      });
+    });
+
+    async function loadOrders() {
+      const el = document.getElementById('orders-list');
+      try {
+        const { orders } = await OrdersAPI.my();
+        if (!orders.length) { el.innerHTML = '<p>No orders yet.</p>'; return; }
+        el.innerHTML = orders.map((o) => `
+          <div class="card" style="padding:16px;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <strong>${o.order_number}</strong>
+              <span class="status-badge status-${o.status}">${o.status}</span>
+            </div>
+            <p style="font-size:13px;color:var(--text-muted)">${new Date(o.created_at).toLocaleDateString('en-ZA')} | ${formatZAR(o.total)}</p>
+            <a href="/api/invoices/order/${o.order_number}" class="btn btn-sm btn-outline">Download Invoice</a>
+            <a href="${whatsappUrl(`Hi, regarding order ${o.order_number}`)}" class="btn btn-sm btn-whatsapp" target="_blank">WhatsApp Support</a>
+          </div>`).join('');
+      } catch { el.innerHTML = '<p>Could not load orders</p>'; }
+    }
+
+    async function loadVehicles() {
+      try {
+        const { vehicles } = await VehiclesAPI.saved();
+        document.getElementById('vehicles-list').innerHTML = vehicles.map((v) => `
+          <div class="card" style="padding:12px;margin-bottom:8px;display:flex;justify-content:space-between">
+            <span>${v.year} ${v.make} ${v.model} ${v.engine}</span>
+            <button class="btn btn-sm btn-danger veh-remove" data-id="${v.id}">Remove</button>
+          </div>`).join('') || '<p>No saved vehicles</p>';
+        document.querySelectorAll('.veh-remove').forEach((b) => {
+          b.addEventListener('click', async () => {
+            await VehiclesAPI.remove(b.dataset.id);
+            loadVehicles();
+          });
+        });
+      } catch {}
+    }
+
+    async function loadWishlist() {
+      try {
+        const { items } = await WishlistAPI.list();
+        const grid = document.getElementById('wishlist-grid');
+        grid.innerHTML = items.length ? items.map((p) => productCardHTML(p)).join('') : '<p>Wishlist is empty</p>';
+        bindAddToCart(grid, items);
+      } catch {}
+    }
+  </script>
+</body>
+</html>

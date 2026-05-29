@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login | Monise Motor Spares</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-login card" style="padding:32px">
+    <h1 style="color:var(--primary);margin-bottom:8px">Admin Login</h1>
+    <p style="margin-bottom:24px;color:var(--text-muted)">Monise Motor Spares Dashboard</p>
+    <div id="alert-box"></div>
+    <form id="login-form">
+      <div class="form-group"><label>Email</label><input type="email" name="email" required value="admin@monisespares.co.za"></div>
+      <div class="form-group"><label>Password</label><input type="password" name="password" required></div>
+      <button type="submit" class="btn btn-primary btn-block">Login</button>
+    </form>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        const { user } = await AuthAPI.login(fd.get('email'), fd.get('password'));
+        if (!['staff', 'super_admin'].includes(user.role)) {
+          showAlert(document.getElementById('alert-box'), 'Not an admin account');
+          return;
+        }
+        window.location.href = '/admin/';
+      } catch (err) {
+        showAlert(document.getElementById('alert-box'), err.message);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categories | Monise Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout" id="layout"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/admin/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!await requireAdmin()) return;
+      document.getElementById('layout').innerHTML = `
+        ${renderAdminNav('categories')}
+        <main class="admin-main">
+          <h1>Categories</h1>
+          <form id="add-cat" class="card" style="padding:16px;margin:16px 0;display:flex;gap:8px;flex-wrap:wrap">
+            <input name="name" placeholder="Name" required>
+            <input name="slug" placeholder="slug-name">
+            <button class="btn btn-primary">Add</button>
+          </form>
+          <div id="list"></div>
+        </main>`;
+      initAdminLogout();
+      load();
+      document.getElementById('add-cat').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        await AdminAPI.post('/categories', { name: fd.get('name'), slug: fd.get('slug') || fd.get('name').toLowerCase().replace(/\s+/g, '-') });
+        e.target.reset(); load();
+      };
+    });
+    async function load() {
+      const { categories } = await AdminAPI.get('/categories');
+      document.getElementById('list').innerHTML = `
+        <table class="data-table"><tr><th>Name</th><th>Slug</th><th>Active</th><th></th></tr>
+        ${categories.map((c) => `<tr><td>${c.name}</td><td>${c.slug}</td><td>${c.is_active ? 'Yes' : 'No'}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="del(${c.id})">Delete</button></td></tr>`).join('')}
+        </table>`;
+    }
+    async function del(id) { if (confirm('Delete?')) { await AdminAPI.delete(`/categories/${id}`); load(); } }
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customers | Monise Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout" id="layout"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/admin/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!await requireAdmin()) return;
+      document.getElementById('layout').innerHTML = `
+        ${renderAdminNav('customers')}
+        <main class="admin-main"><h1>Customers</h1><div id="list"></div></main>`;
+      initAdminLogout();
+      const { customers } = await AdminAPI.get('/customers');
+      document.getElementById('list').innerHTML = `
+        <table class="data-table">
+          <tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Spent</th><th>Status</th></tr>
+          ${customers.map((c) => `<tr>
+            <td>${c.name}</td><td>${c.email}</td><td>${c.phone || '—'}</td>
+            <td>${c.order_count}</td><td>${formatZAR(c.total_spent)}</td>
+            <td>${c.is_banned ? 'Banned' : 'Active'}</td>
+          </tr>`).join('')}
+        </table>`;
+    });
+  </script>
+</body>
+</html>
